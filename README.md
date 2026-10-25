@@ -1,5 +1,7 @@
 # Escapadas 2027
 
+📣 **[Veja as novidades](NOVIDADES.md)**
+
 Planejador de viagens de 3 dias em 2027 saindo de Barcelona, só com voo direto low-cost ou trem direto. A ideia é tirar a sexta ou a segunda, emendar o fim de semana e viajar fora de época.
 
 É uma página única (`index.html`), sem instalação e sem build. Abra no navegador ou publique com o GitHub Pages.
