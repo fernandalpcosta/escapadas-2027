@@ -106,7 +106,25 @@ main .wrap{padding-block:20px 48px}
 .foot{color:var(--muted);font-size:13px;max-width:75ch;margin-top:28px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--board);color:#fff;padding:10px 16px;border-radius:8px;font-size:14px;z-index:20;max-width:calc(100% - 32px)}
 .sync{font-size:12px;color:#B9C3D3}
-@media (max-width:560px){.stats{grid-template-columns:repeat(3,minmax(0,1fr))}.city{font-size:23px}}
+.tagrow{flex-basis:100%;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.tagbtn{font:inherit;font-size:13px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:3px 11px;cursor:pointer}
+.tagbtn[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tags{display:flex;flex-wrap:wrap;gap:5px}
+.tag{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:1px 7px}
+.tag.on{color:var(--ink);border-color:var(--ink);font-weight:700}
+.tag.ssn{color:var(--good);border-color:var(--good-bg);background:var(--good-bg)}
+.hi{margin:0;padding-left:18px;font-size:14px;display:flex;flex-direction:column;gap:2px}
+.cost{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+.cost caption{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;padding-bottom:4px}
+.cost th{font-size:11px;font-weight:700;color:var(--muted);text-align:right;padding:2px 0}
+.cost td{padding:3px 0;border-top:1px solid var(--line)}
+.cost td+td{text-align:right;font-family:var(--f-mono);width:28%}
+.cost tfoot td{font-weight:700;font-size:15px;border-top:2px solid var(--ink)}
+.ev{display:flex;flex-direction:column;gap:2px;font-size:13px}
+.ev b{font-family:var(--f-mono);font-size:12px;text-transform:uppercase;color:var(--muted);display:inline-block;width:34px}
+.ev .now{background:var(--sun-bg);color:var(--ink);border-radius:4px;padding:1px 4px;margin-inline:-4px}
+.ev .now b{color:var(--sun)}
+@media (max-width:560px){.city{font-size:23px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -150,12 +168,13 @@ main .wrap{padding-block:20px 48px}
       <label for="sortSel">Ordenar</label>
       <select id="sortSel">
         <option value="season">Boa época primeiro</option>
-        <option value="cost">Mais barato por dia</option>
+        <option value="cost">Mais barato (total)</option>
         <option value="beauty">Mais bonito</option>
         <option value="time">Viagem mais curta</option>
       </select>
     </div>
     <label class="check" for="opoChk"><input type="checkbox" id="opoChk"> Só onde também há direto do Porto</label>
+    <div class="tagrow"><span class="lbl">O que vocês querem?</span><span id="tagBar" style="display:contents"></span></div>
   </div>
 </div>
 
@@ -163,7 +182,7 @@ main .wrap{padding-block:20px 48px}
   <section class="wrap" id="view-dest">
     <div class="summary" id="summary"></div>
     <div class="grid" id="grid"></div>
-    <p class="foot">Os custos por dia são estimativas para duas pessoas dividindo um quarto simples, com comida e transporte local, por pessoa, em baixa temporada. A duração é a do voo ou trem direto. As rotas das low-cost mudam a cada temporada: o selo "direto do Porto" indica rotas que costumam existir, mas sempre confira no Google Flights antes de comprar. Os botões já abrem a busca com as datas do fim de semana escolhido.</p>
+    <p class="foot">Como os custos são calculados: valores por pessoa, em baixa temporada, para 3 dias e 2 noites com o casal dividindo o quarto. <b>Econômica</b> = passagem em promoção, hostel com quarto privado ou apartamento simples, comida de mercado, padaria e comida de rua. <b>Intermediária</b> = tarifa low-cost normal sem mala despachada, hotel 3 estrelas bem localizado, uma refeição em restaurante por dia. Transporte local inclui metrô, ônibus do aeroporto e bate-voltas de trem. São estimativas minhas, não preços ao vivo: o link da Ryanair já abre com as datas, e o da Vueling abre o site para você buscar. As rotas das low-cost mudam por temporada, então confira antes de comprar.</p>
   </section>
   <section class="wrap" id="view-plan" hidden>
     <div class="empty" id="planEmpty">
@@ -177,34 +196,143 @@ main .wrap{padding-block:20px 48px}
 
 <script>
 const DEST = [
-  // [id, cidade, país, código Google, código Skyscanner, modo, duração min, €/dia, beleza 1-5, Porto direto, meses bons, companhias, por que ir]
-  {id:"prg",city:"Praga",country:"República Tcheca",code:"PRG",sky:"prg",mode:"fly",min:150,day:75,beauty:5,opo:false,months:[3,4,5,10,11,12],air:"Vueling, Smartwings",why:"Cidade velha medieval, ponte Carlos ao amanhecer, cerveja muito barata. Em dezembro tem mercado de Natal, mas os preços sobem."},
-  {id:"ckr",city:"Český Krumlov",country:"República Tcheca (via Praga)",code:"PRG",sky:"prg",mode:"fly",min:150,day:65,beauty:5,opo:false,months:[4,5,9,10],air:"Voo até Praga + ônibus de 3h",why:"Vilarejo de conto de fadas num meandro do rio. Dá para fazer Praga + 1 noite aqui num fim de semana de 3 dias."},
-  {id:"sof",city:"Sófia",country:"Bulgária",code:"SOF",sky:"sof",mode:"fly",min:185,day:45,beauty:3,opo:false,months:[3,4,5,9,10,11],air:"Wizz Air, Ryanair",why:"Uma das capitais mais baratas da UE. Bate-volta ao Mosteiro de Rila, um dos lugares mais bonitos dos Bálcãs."},
-  {id:"bud",city:"Budapeste",country:"Hungria",code:"BUD",sky:"bud",mode:"fly",min:160,day:65,beauty:5,opo:true,months:[3,4,5,10,11,12],air:"Wizz Air, Ryanair, Vueling",why:"O Danúbio à noite, banhos termais (perfeitos no frio) e bares em ruínas. Ótima relação custo-beleza."},
-  {id:"krk",city:"Cracóvia",country:"Polônia",code:"KRK",sky:"krk",mode:"fly",min:165,day:55,beauty:4,opo:false,months:[3,4,5,9,10,12],air:"Ryanair, Vueling",why:"Praça medieval enorme, bairro judeu Kazimierz, comida barata. Bate-volta às minas de sal de Wieliczka."},
-  {id:"otp",city:"Bucareste + Brasov",country:"Romênia",code:"OTP",sky:"buch",mode:"fly",min:200,day:50,beauty:4,opo:false,months:[4,5,9,10],air:"Wizz Air, Ryanair",why:"Pegue o trem até Brasov, na Transilvânia: montanhas, castelos e cidade velha bonita, com preços baixos."},
-  {id:"beg",city:"Belgrado",country:"Sérvia",code:"BEG",sky:"beg",mode:"fly",min:160,day:50,beauty:3,opo:false,months:[4,5,9,10],air:"Air Serbia",why:"Fortaleza sobre os rios, vida noturna famosa e comida farta. Fora da UE, então leve o passaporte ou documento válido."},
-  {id:"vie",city:"Viena",country:"Áustria",code:"VIE",sky:"vie",mode:"fly",min:140,day:110,beauty:5,opo:false,months:[3,4,11,12],air:"Vueling, Level",why:"Palácios, cafés e museus. Mais cara, mas linda no inverno. Bratislava fica a 1h de trem."},
-  {id:"rix",city:"Riga",country:"Letônia",code:"RIX",sky:"rix",mode:"fly",min:220,day:65,beauty:4,opo:false,months:[5,6,9,12],air:"airBaltic, Ryanair",why:"Art nouveau por todo lado e cidade velha hanseática. Diferente de tudo no sul."},
-  {id:"ath",city:"Atenas",country:"Grécia",code:"ATH",sky:"ath",mode:"fly",min:190,day:75,beauty:4,opo:false,months:[3,4,5,10,11],air:"Vueling, Aegean",why:"Acrópole sem fila e sem calor em março ou novembro. Dá para ir de barco a Égina num dia."},
-  {id:"nap",city:"Nápoles",country:"Itália",code:"NAP",sky:"nap",mode:"fly",min:115,day:70,beauty:4,opo:false,months:[3,4,5,10,11],air:"Vueling, Ryanair",why:"A melhor pizza do mundo, Pompeia e, fora de época, a Costa Amalfitana vazia e mais barata."},
-  {id:"bri",city:"Bari + Polignano",country:"Itália (Puglia)",code:"BRI",sky:"bri",mode:"fly",min:130,day:65,beauty:5,opo:false,months:[4,5,10],air:"Ryanair, Vueling",why:"Cidades brancas sobre o mar, trulli de Alberobello e Matera a 1h. Uma das regiões mais bonitas da Itália."},
-  {id:"pmo",city:"Palermo",country:"Itália (Sicília)",code:"PMO",sky:"pmo",mode:"fly",min:110,day:65,beauty:4,opo:false,months:[3,4,5,10,11],air:"Vueling, Ryanair",why:"Mercados de rua, igrejas árabe-normandas e Cefalù a 1h de trem. Inverno ameno."},
-  {id:"blq",city:"Bolonha",country:"Itália",code:"BLQ",sky:"blq",mode:"fly",min:100,day:80,beauty:4,opo:true,months:[3,4,5,10,11],air:"Ryanair, Vueling",why:"Capital da comida italiana, com arcadas por toda a cidade. Florença fica a 37 min de trem."},
-  {id:"trn",city:"Turim",country:"Itália",code:"TRN",sky:"trn",mode:"fly",min:80,day:80,beauty:3,opo:false,months:[3,4,10,11,12],air:"Ryanair, Vueling",why:"Elegante e pouco turística, com Alpes no horizonte. Café, chocolate e vinhos do Piemonte."},
-  {id:"ven",city:"Veneza",country:"Itália",code:"VCE",sky:"veni",mode:"fly",min:105,day:120,beauty:5,opo:false,months:[1,2,11],air:"Vueling, Ryanair (Treviso)",why:"Em janeiro ou novembro, com neblina e sem multidões, fica outra cidade. Evite o Carnaval se quiser preço baixo."},
-  {id:"rom",city:"Roma",country:"Itália",code:"ROM",sky:"rome",mode:"fly",min:110,day:95,beauty:5,opo:true,months:[1,2,3,11],air:"Vueling, Ryanair",why:"Clássico que nunca falha. Janeiro e fevereiro têm as menores filas do ano."},
-  {id:"mil",city:"Milão + Lago de Como",country:"Itália",code:"MIL",sky:"mila",mode:"fly",min:90,day:90,beauty:4,opo:true,months:[3,4,10,11],air:"Ryanair (Bergamo), Vueling",why:"Voos muito baratos para Bergamo. Dá para ficar em Como ou Varenna e ver o lago sem a lotação do verão."},
-  {id:"mla",city:"Malta",country:"Malta",code:"MLA",sky:"mla",mode:"fly",min:125,day:75,beauty:4,opo:false,months:[2,3,4,10,11],air:"Ryanair, Vueling",why:"Valletta inteira é patrimônio da humanidade, mar azul e 18°C em fevereiro."},
-  {id:"opo",city:"Porto",country:"Portugal",code:"OPO",sky:"opo",mode:"fly",min:105,day:65,beauty:5,opo:true,months:[1,2,3,4,10,11,12],air:"Vueling, Ryanair",why:"A cidade da sua namorada. Base ótima para ela receber você ou para um fim de semana no Douro."},
-  {id:"lis",city:"Lisboa",country:"Portugal",code:"LIS",sky:"lis",mode:"fly",min:115,day:85,beauty:5,opo:true,months:[1,2,3,4,10,11],air:"Vueling, TAP, Ryanair",why:"Ponto de encontro fácil: ela vai de trem do Porto (3h) e você voa de Barcelona. Sintra num dos dias."},
-  {id:"mpl",city:"Montpellier",country:"França",code:"MPL",sky:"mpl",mode:"train",min:180,day:85,beauty:3,opo:false,months:[3,4,5,10],air:"Trem direto Renfe / SNCF",why:"A viagem de trem mais curta para a França. Centro histórico de pedestres e praias perto."},
-  {id:"avi",city:"Nîmes + Avignon",country:"França (Provença)",code:"AVN",sky:"avn",mode:"train",min:220,day:90,beauty:5,opo:false,months:[3,4,5,10],air:"Trem direto Renfe / SNCF",why:"Arena romana, Pont du Gard e o Palácio dos Papas. A Provença sem o calor e as filas de julho."},
-  {id:"mrs",city:"Marselha",country:"França",code:"MRS",sky:"mrs",mode:"train",min:270,day:90,beauty:4,opo:true,months:[3,4,5,10,11],air:"Trem direto Renfe / SNCF",why:"Porto antigo, bouillabaisse e as Calanques. Ela pode voar do Porto e vocês se encontram lá."},
-  {id:"lys",city:"Lyon",country:"França",code:"LYS",sky:"lys",mode:"train",min:300,day:95,beauty:4,opo:true,months:[3,4,10,11,12],air:"Trem direto Renfe / SNCF",why:"A capital gastronômica da França. Em 8 de dezembro tem a Fête des Lumières."},
-  {id:"tls",city:"Toulouse + Carcassonne",country:"França",code:"TLS",sky:"tls",mode:"train",min:200,day:80,beauty:4,opo:false,months:[3,4,5,10],air:"Trem direto Renfe / SNCF",why:"A 'cidade rosa' e, a 1h, a cidadela medieval de Carcassonne."},
+  // Custos por pessoa, em euros, baixa temporada, casal dividindo o quarto.
+  // h = hospedagem por noite [econômica, intermediária]; f = comida por dia [barata, intermediária];
+  // t = transporte local por dia; go = ida e volta low-cost [promo, normal]; fr = aeroporto no site da Ryanair.
+  {id:"prg",city:"Praga",country:"República Tcheca",code:"PRG",sky:"prg",fr:"PRG",mode:"fly",min:150,beauty:5,opo:false,
+   h:[25,45],f:[20,40],t:5,go:[50,130],months:[3,4,5,10,11,12],air:"Vueling, Ryanair",
+   tags:["Arquitetura","História","Vida noturna"],
+   hi:["Cidade velha medieval e ponte Carlos ao amanhecer, sem multidão","Cerveja tcheca muito barata e boa","Castelo de Praga e o bairro de Malá Strana"],
+   ev:[[5,"Festival Primavera de Praga (música clássica)"],[12,"Mercados de Natal na praça da Cidade Velha"]]},
+  {id:"ckr",city:"Český Krumlov",country:"República Tcheca (via Praga)",code:"PRG",sky:"prg",fr:"PRG",mode:"fly",min:150,beauty:5,opo:false,
+   h:[25,40],f:[20,35],t:12,go:[50,130],months:[4,5,6,9,10],air:"Voo até Praga + ônibus de 3h",
+   tags:["Natureza","História","Arquitetura"],
+   hi:["Vilarejo de conto de fadas num meandro do rio Vltava","Combina com Praga: 1 noite em cada","Castelo com teatro barroco original"],
+   ev:[[6,"Festa da Rosa de Cinco Pétalas (cidade vira medieval)"]]},
+  {id:"sof",city:"Sófia",country:"Bulgária",code:"SOF",sky:"sof",fr:"SOF",mode:"fly",min:185,beauty:3,opo:false,
+   h:[18,35],f:[15,28],t:4,go:[40,110],months:[3,4,5,9,10],air:"Ryanair, Wizz Air",
+   tags:["Montanha","Natureza","História"],
+   hi:["Mosteiro de Rila, um dos lugares mais bonitos dos Bálcãs (bate-volta)","Monte Vitosha colado na cidade, para trilha","Uma das capitais mais baratas da UE"],
+   ev:[[3,"Baba Marta (1º de março): todo mundo usa martenitsas"],[12,"Temporada de esqui em Bansko e Borovets"]]},
+  {id:"bud",city:"Budapeste",country:"Hungria",code:"BUD",sky:"bud",fr:"BUD",mode:"fly",min:160,beauty:5,opo:true,
+   h:[22,40],f:[20,38],t:5,go:[40,120],months:[3,4,5,10,11,12],air:"Vueling, Ryanair, Wizz Air",
+   tags:["Termas","Arquitetura","Vida noturna"],
+   hi:["Banhos termais ao ar livre, perfeitos no frio","Parlamento e o Danúbio iluminados à noite","Bares em ruínas no bairro judeu"],
+   ev:[[8,"Festival Sziget"],[12,"Mercado de Natal da Praça Vörösmarty"]]},
+  {id:"krk",city:"Cracóvia",country:"Polônia",code:"KRK",sky:"krk",fr:"KRK",mode:"fly",min:165,beauty:4,opo:false,
+   h:[20,38],f:[17,32],t:4,go:[40,110],months:[3,4,5,9,10,12],air:"Ryanair, Vueling",
+   tags:["História","Gastronomia","Museus"],
+   hi:["Uma das maiores praças medievais da Europa","Kazimierz, o antigo bairro judeu, cheio de bares","Minas de sal de Wieliczka e Auschwitz-Birkenau (bate-volta)"],
+   ev:[[6,"Wianki: noite de São João no rio Vístula"],[12,"Mercado de Natal na Rynek Główny"]]},
+  {id:"otp",city:"Bucareste + Brasov",country:"Romênia",code:"OTP",sky:"buch",fr:"OTP",mode:"fly",min:200,beauty:4,opo:false,
+   h:[20,38],f:[17,32],t:10,go:[50,130],months:[4,5,6,9,10],air:"Ryanair, Wizz Air",
+   tags:["Montanha","Natureza","História"],
+   hi:["Brasov, cidade velha cercada pelos Cárpatos (2h30 de trem)","Castelos de Bran (o 'do Drácula') e Peleș","Comida farta e barata"],
+   ev:[[10,"Outono nos Cárpatos: florestas coloridas"]]},
+  {id:"vie",city:"Viena",country:"Áustria",code:"VIE",sky:"vie",fr:"VIE",mode:"fly",min:140,beauty:5,opo:false,
+   h:[40,70],f:[30,50],t:8,go:[50,140],months:[3,4,11,12],air:"Vueling, Ryanair",
+   tags:["Museus","Arquitetura","Gastronomia"],
+   hi:["Palácios de Schönbrunn e Belvedere (com O Beijo, de Klimt)","Cafés históricos e a Sachertorte","Bratislava fica a 1h de trem"],
+   ev:[[1,"Temporada de bailes (jan–fev)"],[12,"Mercados de Natal por toda a cidade"]]},
+  {id:"rix",city:"Riga",country:"Letônia",code:"RIX",sky:"rix",fr:"RIX",mode:"fly",min:220,beauty:4,opo:false,
+   h:[22,40],f:[20,35],t:5,go:[60,150],months:[5,6,9,12],air:"Ryanair, airBaltic",
+   tags:["Arquitetura","Natureza","Mar"],
+   hi:["A maior concentração de art nouveau do mundo","Mercado central em hangares de zepelim","Praia de Jūrmala a 30 min de trem"],
+   ev:[[6,"Līgo/Jāņi: festa do solstício (23–24 jun)"],[12,"Mercado de Natal da Praça da Catedral"]]},
+  {id:"ath",city:"Atenas",country:"Grécia",code:"ATH",sky:"ath",fr:"ATH",mode:"fly",min:190,beauty:4,opo:false,
+   h:[30,55],f:[22,40],t:6,go:[60,150],months:[3,4,5,10,11],air:"Vueling, Ryanair, Aegean",
+   tags:["História","Museus","Mar"],
+   hi:["Acrópole sem fila e sem calor","Barco de 40 min até a ilha de Égina","Pôr do sol no Cabo Sounion"],
+   ev:[[3,"25 de março: Dia da Independência, desfile"],[11,"Maratona Autêntica de Atenas"]]},
+  {id:"nap",city:"Nápoles + Amalfi",country:"Itália",code:"NAP",sky:"nap",fr:"NAP",mode:"fly",min:115,beauty:5,opo:false,
+   h:[28,50],f:[18,35],t:8,go:[40,120],months:[3,4,5,10,11],air:"Vueling, Ryanair",
+   tags:["Gastronomia","Mar","História"],
+   hi:["A pizza napolitana original, a partir de €5","Pompeia e o Vesúvio","Costa Amalfitana vazia e mais barata fora do verão"],
+   ev:[[12,"Presépios na Via San Gregorio Armeno"],[9,"Milagre de San Gennaro (19 set)"]]},
+  {id:"bri",city:"Bari + Polignano",country:"Itália (Puglia)",code:"BRI",sky:"bri",fr:"BRI",mode:"fly",min:130,beauty:5,opo:false,
+   h:[28,50],f:[18,35],t:10,go:[40,120],months:[4,5,6,9,10],air:"Ryanair, Vueling",
+   tags:["Mar","Natureza","Gastronomia"],
+   hi:["Polignano a Mare, cidade branca sobre falésias","Trulli de Alberobello","Matera, cidade de cavernas, a 1h"],
+   ev:[[5,"Festa de São Nicolau em Bari (7–9 mai)"]]},
+  {id:"pmo",city:"Palermo",country:"Itália (Sicília)",code:"PMO",sky:"pmo",fr:"PMO",mode:"fly",min:110,beauty:4,opo:false,
+   h:[25,45],f:[16,32],t:6,go:[40,120],months:[3,4,5,10,11],air:"Vueling, Ryanair",
+   tags:["Gastronomia","Mar","História"],
+   hi:["Comida de rua nos mercados Ballarò e Vucciria","Igrejas árabe-normandas e Monreale","Cefalù e a praia a 1h de trem"],
+   ev:[[7,"Festino de Santa Rosalia (14–15 jul)"]]},
+  {id:"blq",city:"Bolonha",country:"Itália",code:"BLQ",sky:"blq",fr:"BLQ",mode:"fly",min:100,beauty:4,opo:true,
+   h:[35,60],f:[22,42],t:6,go:[40,120],months:[3,4,5,10,11],air:"Ryanair, Vueling",
+   tags:["Gastronomia","Arquitetura","Vinho"],
+   hi:["Capital da comida italiana: tortellini, mortadela, ragù","Quilômetros de arcadas cobertas","Florença a 37 min e Módena a 25 min de trem"],
+   ev:[[10,"Temporada de trufas na Emília-Romanha"]]},
+  {id:"trn",city:"Turim",country:"Itália",code:"TRN",sky:"trn",fr:"TRN",mode:"fly",min:80,beauty:3,opo:false,
+   h:[32,55],f:[22,40],t:6,go:[40,110],months:[3,4,10,11,12],air:"Ryanair, Vueling",
+   tags:["Museus","Gastronomia","Vinho"],
+   hi:["Museu Egípcio, o maior fora do Cairo","Bicerin, chocolate e o aperitivo inventado aqui","Vinhos de Barolo e Langhe (bate-volta)"],
+   ev:[[10,"Feira da Trufa Branca de Alba (out–nov)"],[11,"Artissima, feira de arte contemporânea"]]},
+  {id:"ven",city:"Veneza",country:"Itália",code:"VCE",sky:"veni",fr:"TSF",mode:"fly",min:105,beauty:5,opo:false,
+   h:[45,80],f:[28,50],t:15,go:[40,130],months:[1,2,4,5,11],air:"Vueling, Ryanair (Treviso)",
+   tags:["Arquitetura","Museus","História"],
+   hi:["Com neblina e sem multidão, fica outra cidade","Burano e Murano de vaporetto","Durma em Mestre para gastar bem menos"],
+   ev:[[2,"Carnaval (até 9 fev 2027): lindo, mas caro"],[5,"Bienal de Arte de 2027 (abr–nov)"]]},
+  {id:"rom",city:"Roma",country:"Itália",code:"ROM",sky:"rome",fr:"FCO",mode:"fly",min:110,beauty:5,opo:true,
+   h:[40,70],f:[25,45],t:7,go:[40,120],months:[1,2,3,11],air:"Vueling, Ryanair",
+   tags:["História","Museus","Gastronomia"],
+   hi:["Coliseu e Vaticano com as menores filas do ano","Trastevere à noite","Museus do Estado grátis no primeiro domingo do mês"],
+   ev:[[4,"Natal de Roma (21 abr): desfile romano"],[3,"Páscoa no Vaticano (28 mar 2027)"]]},
+  {id:"mil",city:"Milão + Lago de Como",country:"Itália",code:"MIL",sky:"mila",fr:"BGY",mode:"fly",min:90,beauty:4,opo:true,
+   h:[35,60],f:[25,45],t:14,go:[30,100],months:[3,4,5,10,11],air:"Ryanair (Bergamo), Vueling",
+   tags:["Natureza","Museus","Gastronomia"],
+   hi:["Voos muito baratos para Bergamo, que tem cidade alta linda","Como, Bellagio e Varenna de barco, sem a lotação do verão","A Última Ceia de Da Vinci (reserve antes)"],
+   ev:[[4,"Salone del Mobile, semana de design (abr)"],[12,"Inauguração da temporada do Scala (7 dez)"]]},
+  {id:"mla",city:"Malta",country:"Malta",code:"MLA",sky:"mla",fr:"MLA",mode:"fly",min:125,beauty:4,opo:false,
+   h:[30,55],f:[20,38],t:5,go:[40,120],months:[2,3,4,10,11],air:"Ryanair, Vueling",
+   tags:["Mar","História","Natureza"],
+   hi:["Valletta inteira é patrimônio da humanidade","Mar azul e cerca de 18°C em fevereiro","Ilha de Gozo e a Blue Lagoon de Comino"],
+   ev:[[2,"Carnaval de Valletta"],[10,"Notte Bianca: museus abertos à noite"]]},
+  {id:"opo",city:"Porto",country:"Portugal",code:"OPO",sky:"opo",fr:"OPO",mode:"fly",min:105,beauty:5,opo:true,
+   h:[28,50],f:[16,32],t:5,go:[40,110],months:[1,2,3,4,10,11,12],air:"Vueling, Ryanair",
+   tags:["Vinho","Gastronomia","Natureza"],
+   hi:["A cidade da sua namorada","Caves de vinho do Porto em Gaia","Vale do Douro de trem até o Pinhão"],
+   ev:[[6,"São João (23 jun): a maior festa da cidade"],[9,"Vindimas no Douro"]]},
+  {id:"lis",city:"Lisboa",country:"Portugal",code:"LIS",sky:"lis",fr:"LIS",mode:"fly",min:115,beauty:5,opo:true,
+   h:[35,60],f:[18,35],t:6,go:[40,110],months:[1,2,3,4,10,11],air:"Vueling, Ryanair, TAP",
+   tags:["Arquitetura","Gastronomia","Mar"],
+   hi:["Ponto de encontro fácil: ela vai de trem do Porto (3h)","Sintra num dos dias","Miradouros e pastéis de Belém"],
+   ev:[[6,"Santo Antônio (12–13 jun): arraiais e sardinha"]]},
+  {id:"mpl",city:"Montpellier",country:"França",code:"MPL",sky:"mpl",fr:null,mode:"train",min:180,beauty:3,opo:false,
+   h:[35,55],f:[22,40],t:4,go:[50,110],months:[3,4,5,9,10],air:"Trem direto Renfe / SNCF",
+   tags:["Mar","Urbano","Gastronomia"],
+   hi:["A viagem de trem mais curta para a França","Centro histórico só para pedestres","Praias e ostras de Sète a 20 min"],
+   ev:[[6,"Montpellier Danse (jun–jul)"]]},
+  {id:"avi",city:"Nîmes + Avignon",country:"França (Provença)",code:"AVN",sky:"avn",fr:null,mode:"train",min:220,beauty:5,opo:false,
+   h:[35,60],f:[25,45],t:10,go:[70,140],months:[3,4,5,9,10],air:"Trem direto Renfe / SNCF",
+   tags:["História","Natureza","Vinho"],
+   hi:["Arena romana de Nîmes e o Pont du Gard","Palácio dos Papas em Avignon","Vinhos de Châteauneuf-du-Pape"],
+   ev:[[5,"Feria de Pentecostes em Nîmes (mai)"],[7,"Festival de Teatro de Avignon (jul)"]]},
+  {id:"mrs",city:"Marselha",country:"França",code:"MRS",sky:"mrs",fr:null,mode:"train",min:270,beauty:4,opo:true,
+   h:[38,60],f:[25,45],t:5,go:[70,150],months:[3,4,5,9,10,11],air:"Trem direto Renfe / SNCF",
+   tags:["Mar","Natureza","Urbano"],
+   hi:["Trilhas nas Calanques, enseadas de água turquesa","Porto Velho e a bouillabaisse","Ela pode voar do Porto e vocês se encontram lá"],
+   ev:[[9,"Fim do verão: mar ainda quente e menos gente"]]},
+  {id:"lys",city:"Lyon",country:"França",code:"LYS",sky:"lys",fr:null,mode:"train",min:300,beauty:4,opo:true,
+   h:[38,65],f:[28,48],t:5,go:[80,160],months:[3,4,10,11,12],air:"Trem direto Renfe / SNCF",
+   tags:["Gastronomia","Museus","Urbano"],
+   hi:["Capital gastronômica da França: os bouchons","Vieux Lyon e suas passagens secretas (traboules)","Vinhos do Beaujolais ao lado"],
+   ev:[[12,"Fête des Lumières (perto de 8 dez)"],[11,"Beaujolais Nouveau (3ª quinta de nov)"]]},
+  {id:"tls",city:"Toulouse + Carcassonne",country:"França",code:"TLS",sky:"tls",fr:null,mode:"train",min:200,beauty:4,opo:false,
+   h:[32,55],f:[22,40],t:8,go:[60,130],months:[3,4,5,9,10],air:"Trem direto Renfe / SNCF",
+   tags:["História","Urbano","Gastronomia"],
+   hi:["A 'cidade rosa', com prédios de tijolo","Cidadela medieval de Carcassonne a 1h","Cassoulet de verdade"],
+   ev:[[2,"Festival da Violeta de Toulouse (fev)"]]},
 ];
+const TAGS=["Natureza","Montanha","Mar","História","Museus","Arquitetura","Gastronomia","Vinho","Termas","Vida noturna","Urbano"];
+const SEASONS=[["Inverno",[12,1,2]],["Primavera",[3,4,5]],["Verão",[6,7,8]],["Outono",[9,10,11]]];
+function seasons(d){return SEASONS.filter(([,ms])=>ms.some(m=>d.months.includes(m))).map(([n])=>n)}
+// Viagem de 3 dias e 2 noites, por pessoa: [econômica, intermediária]
+function cost(d){
+  const lines=[["Ida e volta "+(d.mode==="train"?"(trem)":"(low-cost)"),d.go[0],d.go[1]],["Hospedagem, 2 noites",2*d.h[0],2*d.h[1]],["Comida, 3 dias",3*d.f[0],3*d.f[1]],["Transporte local",3*d.t,3*d.t]];
+  return {lines,lo:lines.reduce((s,l)=>s+l[1],0),hi:lines.reduce((s,l)=>s+l[2],0)};
+}
 const MONTHS=["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
 const MSHORT=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
 const DOW=["dom","seg","ter","qua","qui","sex","sáb"];
@@ -228,8 +356,10 @@ function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;","
 function links(d,sat,mode,compact){
   const[a,b]=range(sat,mode);const out=[];
   if(d.mode==="fly"){
+    if(d.fr)out.push(["Ryanair",`https://www.ryanair.com/es/es/trip/flights/select?adults=1&teens=0&children=0&infants=0&dateOut=${a}&dateIn=${b}&isConnectedFlight=false&isReturn=true&discount=0&originIata=BCN&destinationIata=${d.fr}`]);
+    out.push(["Vueling","https://www.vueling.com/es"]);
     const q=o=>"https://www.google.com/travel/flights?q="+encodeURIComponent(`Flights from ${o} to ${d.code} on ${a} through ${b}`);
-    out.push([compact?"Voos":"Google Flights",q("BCN")]);
+    out.push([compact?"Google":"Google Flights",q("BCN")]);
     if(!compact)out.push(["Skyscanner",`https://www.skyscanner.es/transport/flights/bcn/${d.sky}/${yymmdd(a)}/${yymmdd(b)}/`]);
   }else{
     out.push([compact?"Trem":"Trem (Trainline)","https://www.thetrainline.com/pt"]);
@@ -243,10 +373,10 @@ function links(d,sat,mode,compact){
 }
 
 // ---------- estado ----------
-let state={sat:defaultSat(),mode:"fri",tr:"all",sort:"season",opo:false,tab:"dest"};
+let state={sat:defaultSat(),mode:"fri",tr:"all",sort:"season",opo:false,tab:"dest",tags:[]};
 let trips={}; // chave: sábado
 function defaultSat(){return WEEKENDS.find(s=>s>="2027-03-01")}
-try{const s=JSON.parse(localStorage.getItem("esc27-ui")||"null");if(s)Object.assign(state,s,{tab:s.tab||"dest"})}catch(e){}
+try{const s=JSON.parse(localStorage.getItem("esc27-ui")||"null");if(s)Object.assign(state,s,{tab:s.tab||"dest",tags:Array.isArray(s.tags)?s.tags:[]})}catch(e){}
 function saveUi(){try{localStorage.setItem("esc27-ui",JSON.stringify(state))}catch(e){}}
 
 // ---------- armazenamento: db compartilhado, ou só neste navegador ----------
@@ -301,32 +431,39 @@ function render(){
 function setPressed(id,v){document.getElementById(id).setAttribute("aria-pressed",v)}
 
 function renderDest(){
-  let list=DEST.filter(d=>(state.tr==="all"||d.mode===state.tr)&&(!state.opo||d.opo));
-  const s={season:(a,b)=>(score(b)-score(a))||(a.day-b.day),cost:(a,b)=>a.day-b.day,beauty:(a,b)=>(b.beauty-a.beauty)||(a.day-b.day),time:(a,b)=>a.min-b.min}[state.sort];
+  const tagBar=document.getElementById("tagBar");
+  tagBar.innerHTML=TAGS.map(t=>`<button class="tagbtn" data-tag="${t}" aria-pressed="${state.tags.includes(t)}">${t}</button>`).join("")+(state.tags.length?`<button class="x" data-tag="">limpar</button>`:"");
+  let list=DEST.filter(d=>(state.tr==="all"||d.mode===state.tr)&&(!state.opo||d.opo)&&state.tags.every(t=>d.tags.includes(t)));
+  const m=monthOf(state.sat);
+  const evNow=d=>d.ev.filter(e=>e[0]===m);
+  const s={season:(a,b)=>(score(b)-score(a))||(evNow(b).length-evNow(a).length)||(cost(a).lo-cost(b).lo),cost:(a,b)=>cost(a).lo-cost(b).lo,beauty:(a,b)=>(b.beauty-a.beauty)||(cost(a).lo-cost(b).lo),time:(a,b)=>a.min-b.min}[state.sort];
   list.sort(s);
   const booked=trips[state.sat];
   const good=list.filter(score).length;
   document.getElementById("summary").innerHTML=`<strong>${esc(longRange(state.sat,state.mode))}</strong><span>${list.length} destinos · ${good} em boa época · `+(booked?`já planejado: <b>${esc(byId[booked.dest]?.city||"")}</b>`:"fim de semana livre")+`</span>`;
   document.getElementById("grid").innerHTML=list.map(d=>{
-    const g=score(d);
+    const g=score(d), c=cost(d), now=evNow(d);
     const mine=booked&&booked.dest===d.id;
     return `<article class="card${g?" season":""}">
       <div class="top"><div><h2 class="city">${esc(d.city)}</h2><div class="country">${esc(d.country)}</div></div><span class="code">${d.code}</span></div>
       <div class="chips">
-        <span class="chip${d.mode==="train"?" train":""}">${d.mode==="train"?"Trem direto":"Voo direto"}</span>
-        ${g?`<span class="chip season">Boa época em ${MSHORT[monthOf(state.sat)-1]}</span>`:""}
+        <span class="chip${d.mode==="train"?" train":""}">${d.mode==="train"?"Trem direto":"Voo direto"} ~${hm(d.min)}</span>
+        ${g?`<span class="chip season">Boa época em ${MSHORT[m-1]}</span>`:""}
+        ${now.length?`<span class="chip season">Evento em ${MSHORT[m-1]}</span>`:""}
         ${d.opo&&d.id!=="opo"?`<span class="chip opo">Também direto do Porto</span>`:""}
       </div>
-      <div class="stats">
-        <div class="stat"><div class="v">~${hm(d.min)}</div><div class="k">${d.mode==="train"?"de trem":"de voo"}</div></div>
-        <div class="stat"><div class="v">~€${d.day}</div><div class="k">por dia</div></div>
-        <div class="stat"><div class="v dots" aria-label="beleza ${d.beauty} de 5">${"●".repeat(d.beauty)}${"○".repeat(5-d.beauty)}</div><div class="k">beleza</div></div>
-      </div>
-      <p class="why">${esc(d.why)}</p>
-      <p class="meta">${esc(d.air)} · melhor em ${d.months.map(m=>MSHORT[m-1]).join(", ")}</p>
+      <div class="tags">${d.tags.map(t=>`<span class="tag${state.tags.includes(t)?" on":""}">${t}</span>`).join("")}${seasons(d).map(t=>`<span class="tag ssn">${t}</span>`).join("")}</div>
+      <ul class="hi">${d.hi.map(h=>`<li>${esc(h)}</li>`).join("")}</ul>
+      <table class="cost"><caption>3 dias, 2 noites, por pessoa</caption>
+        <thead><tr><th></th><th>Econômica</th><th>Intermediária</th></tr></thead>
+        <tbody>${c.lines.map(l=>`<tr><td>${l[0]}</td><td>€${l[1]}</td><td>€${l[2]}</td></tr>`).join("")}</tbody>
+        <tfoot><tr><td>Total</td><td>€${c.lo}</td><td>€${c.hi}</td></tr></tfoot>
+      </table>
+      ${d.ev.length?`<div class="ev"><span class="lbl">Eventos</span>${d.ev.map(e=>`<div class="${e[0]===m?"now":""}"><b>${MSHORT[e[0]-1]}</b> ${esc(e[1])}</div>`).join("")}</div>`:""}
+      <p class="meta">${esc(d.air)} · beleza <span class="dots" aria-label="${d.beauty} de 5">${"●".repeat(d.beauty)}${"○".repeat(5-d.beauty)}</span> · melhor em ${d.months.map(x=>MSHORT[x-1]).join(", ")}</p>
       <div class="links">${links(d,state.sat,state.mode,false)}</div>
       <button class="add" data-add="${d.id}"${mine||!canWrite?" disabled":""}>${mine?"Já está no plano":booked?"Trocar por este":"Pôr no plano"}</button>
-    </article>`}).join("")||`<p>Nenhum destino com esses filtros.</p>`;
+    </article>`}).join("")||`<p>Nenhum destino com esses filtros. Tire algum interesse.</p>`;
 }
 
 let picking=null;
@@ -344,7 +481,7 @@ function renderYear(){
         const d=byId[t.dest];if(!d)return;
         html+=`<div class="wk has"><span class="d">${short(range(s,t.mode)[0])}</span><div class="t trip">
           <span class="name">${esc(d.city)}</span>
-          <span class="sub">${esc(longRange(s,t.mode))} · ${d.mode==="train"?"trem":"voo"} ~${hm(d.min)} · ~€${d.day}/dia</span>
+          <span class="sub">${esc(longRange(s,t.mode))} · ${d.mode==="train"?"trem":"voo"} ~${hm(d.min)} · €${cost(d).lo}–${cost(d).hi} por pessoa</span>
           <div class="mini"><button class="status${t.status==="booked"?" done":""}" data-status="${s}">${t.status==="booked"?"Comprado":"Ideia"}</button>${links(d,s,t.mode,true)}<button class="x" data-del="${s}">remover</button></div>
           <input class="note-in" type="text" id="note-${s}" data-note="${s}" value="${esc(t.note||"")}" placeholder="Nota (ex.: ela vai junto, preço visto…)" maxlength="140">
         </div></div>`;
@@ -378,6 +515,8 @@ document.addEventListener("click",e=>{
   if(st){const s=st.dataset.status;const t=trips[s];putTrip(s,{...t,status:t.status==="booked"?"idea":"booked"});return}
   const del=e.target.closest("[data-del]");
   if(del){const s=del.dataset.del;const name=byId[trips[s]?.dest]?.city;putTrip(s,null);toast(`${name||"Viagem"} removida`);return}
+  const tg=e.target.closest("[data-tag]");
+  if(tg){const t=tg.dataset.tag;state.tags=!t?[]:state.tags.includes(t)?state.tags.filter(x=>x!==t):[...state.tags,t];render();return}
   const p=e.target.closest("[data-pick]");
   if(p){picking=p.dataset.pick;renderYear();document.getElementById("pick-"+picking)?.focus();return}
 });
