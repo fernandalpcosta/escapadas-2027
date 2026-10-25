@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+</head>
+<body>
+<title>Escapadas 2027</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,400..800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: quadro de partidas — barra de controle fixa no topo, grade de destinos, depois o ano em 12 meses */
+:root{
+  --bg:#EEF1F4; --surface:#FFFFFF; --ink:#13213A; --muted:#5A6678; --line:#D5DBE3;
+  --accent:#2346C8; --accent-ink:#FFFFFF; --sun:#B87A00; --sun-bg:#FFF2D2;
+  --good:#1D7A4C; --good-bg:#E1F4EA; --board:#13213A; --board-ink:#F4D35E;
+  --f-display:"Archivo","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible",system-ui,-apple-system,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1522; --surface:#172133; --ink:#E7ECF3; --muted:#9AA6B8; --line:#2A3850;
+  --accent:#7D97FF; --accent-ink:#0E1522; --sun:#F2C14E; --sun-bg:#3A2F12;
+  --good:#6FD3A0; --good-bg:#143326; --board:#060B14; --board-ink:#F4D35E; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1522; --surface:#172133; --ink:#E7ECF3; --muted:#9AA6B8; --line:#2A3850;
+  --accent:#7D97FF; --accent-ink:#0E1522; --sun:#F2C14E; --sun-bg:#3A2F12;
+  --good:#6FD3A0; --good-bg:#143326; --board:#060B14; --board-ink:#F4D35E; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.hero{background:var(--board);color:#E7ECF3}
+header.hero .wrap{padding-block:28px 22px;display:flex;flex-wrap:wrap;gap:16px 32px;align-items:flex-end;justify-content:space-between}
+.hero h1{font-family:var(--f-display);font-stretch:75%;font-weight:800;font-size:clamp(34px,6vw,56px);line-height:.95;margin:0;letter-spacing:-.01em;text-wrap:balance}
+.hero h1 span{color:var(--board-ink)}
+.hero p{margin:8px 0 0;color:#B9C3D3;max-width:58ch}
+.flap{display:flex;gap:4px;font-family:var(--f-mono);font-weight:700}
+.flap b{background:#1F2D47;color:var(--board-ink);padding:6px 8px;border-radius:3px;font-size:20px;min-width:1.6em;text-align:center;border-bottom:2px solid #0A1220}
+.tabs{display:flex;gap:4px;margin-top:4px}
+.tab{font:inherit;font-family:var(--f-display);font-weight:700;font-size:15px;letter-spacing:.04em;text-transform:uppercase;background:transparent;color:#B9C3D3;border:0;border-bottom:3px solid transparent;padding:10px 14px;cursor:pointer}
+.tab[aria-selected="true"]{color:#fff;border-bottom-color:var(--board-ink)}
+.tab:focus-visible,button:focus-visible,select:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tab .count{font-family:var(--f-mono);font-size:12px;background:var(--board-ink);color:var(--board);border-radius:10px;padding:1px 7px;margin-left:6px}
+.controls{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.controls .wrap{padding-block:12px;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:end}
+.field{display:flex;flex-direction:column;gap:3px;min-width:0}
+.field label,.lbl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+select,input[type="text"]{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px;max-width:100%}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{font:inherit;font-size:14px;background:var(--bg);color:var(--ink);border:0;padding:7px 11px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:700}
+.check{display:flex;gap:7px;align-items:center;font-size:14px;cursor:pointer;padding-bottom:7px}
+.check input{width:17px;height:17px;accent-color:var(--accent)}
+main .wrap{padding-block:20px 48px}
+.summary{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;margin-bottom:16px;color:var(--muted)}
+.summary strong{font-family:var(--f-display);font-stretch:85%;font-size:22px;color:var(--ink)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card.season{border-color:var(--sun)}
+.top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.city{font-family:var(--f-display);font-stretch:80%;font-weight:800;font-size:26px;line-height:1;margin:0}
+.country{color:var(--muted);font-size:13px;margin-top:3px}
+.code{font-family:var(--f-mono);font-weight:700;font-size:15px;background:var(--board);color:var(--board-ink);padding:4px 7px;border-radius:4px;flex:none}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;background:var(--bg);color:var(--ink);border:1px solid var(--line);white-space:nowrap}
+.chip.train{background:var(--good-bg);color:var(--good);border-color:transparent}
+.chip.season{background:var(--sun-bg);color:var(--sun);border-color:transparent}
+.chip.opo{background:transparent;color:var(--accent);border-color:var(--accent)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;border-block:1px solid var(--line);padding-block:8px}
+.stat .v{font-family:var(--f-mono);font-weight:700;font-size:15px;font-variant-numeric:tabular-nums}
+.stat .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.why{margin:0;font-size:14px}
+.meta{font-size:13px;color:var(--muted);margin:0}
+.links{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto}
+.links a{font-size:13px;font-weight:700;color:var(--accent);text-decoration:none;border:1px solid var(--line);border-radius:6px;padding:5px 9px}
+.links a:hover{border-color:var(--accent)}
+.add{font:inherit;font-weight:700;font-size:14px;background:var(--accent);color:var(--accent-ink);border:0;border-radius:6px;padding:9px 12px;cursor:pointer}
+.add[disabled]{opacity:.55;cursor:default}
+.dots{letter-spacing:2px;color:var(--sun)}
+.year{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.month{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0}
+.month h3{font-family:var(--f-display);font-stretch:80%;font-weight:800;font-size:20px;margin:0 0 8px;display:flex;justify-content:space-between;align-items:baseline}
+.month h3 small{font-family:var(--f-body);font-size:12px;font-weight:400;color:var(--muted)}
+.wk{display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px dashed var(--line);font-size:14px;min-width:0}
+.wk:first-of-type{border-top:0}
+.wk .d{font-family:var(--f-mono);font-size:12px;color:var(--muted);flex:none;width:70px;font-variant-numeric:tabular-nums}
+.wk .t{flex:1;min-width:0}
+.wk.has{align-items:flex-start}
+.trip{display:flex;flex-direction:column;gap:4px}
+.trip .name{font-weight:700}
+.trip .sub{font-size:12px;color:var(--muted)}
+.status{font:inherit;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;border-radius:4px;border:1px solid var(--line);background:var(--bg);color:var(--muted);padding:2px 6px;cursor:pointer}
+.status.done{background:var(--good-bg);color:var(--good);border-color:transparent}
+.mini{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.mini a{font-size:12px;color:var(--accent);font-weight:700}
+.x{font:inherit;font-size:12px;background:none;border:0;color:var(--muted);cursor:pointer;text-decoration:underline;padding:0}
+.free{color:var(--muted);font-size:13px}
+.pick{font:inherit;font-size:13px;background:none;border:1px dashed var(--line);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer}
+.pick:hover{color:var(--accent);border-color:var(--accent)}
+.note-in{width:100%;font-size:13px;padding:4px 7px}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:18px;margin-bottom:16px}
+.empty h2{font-family:var(--f-display);font-stretch:85%;margin:0 0 4px;font-size:20px}
+.foot{color:var(--muted);font-size:13px;max-width:75ch;margin-top:28px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--board);color:#fff;padding:10px 16px;border-radius:8px;font-size:14px;z-index:20;max-width:calc(100% - 32px)}
+.sync{font-size:12px;color:#B9C3D3}
+@media (max-width:560px){.stats{grid-template-columns:repeat(3,minmax(0,1fr))}.city{font-size:23px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<header class="hero">
+  <div class="wrap">
+    <div>
+      <div class="flap" aria-hidden="true"><b>B</b><b>C</b><b>N</b><b>→</b><b>?</b></div>
+      <h1 style="margin-top:14px">Escapadas <span>2027</span></h1>
+      <p>Viagens de 3 dias saindo de Barcelona, só com voo direto ou trem direto. Tire a sexta ou a segunda, escolha o fim de semana e veja para onde vale ir.</p>
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" id="tab-dest" aria-selected="true">Destinos</button>
+        <button class="tab" role="tab" id="tab-plan" aria-selected="false">Meu ano<span class="count" id="tripCount">0</span></button>
+      </div>
+    </div>
+    <div class="sync" id="sync">Carregando plano…</div>
+  </div>
+</header>
+
+<div class="controls">
+  <div class="wrap">
+    <div class="field">
+      <label for="wkSel">Fim de semana</label>
+      <select id="wkSel"></select>
+    </div>
+    <div class="field">
+      <span class="lbl" id="modeLbl">Dia livre</span>
+      <div class="seg" role="group" aria-labelledby="modeLbl">
+        <button id="mFri" aria-pressed="true">Sexta (sex–dom)</button>
+        <button id="mMon" aria-pressed="false">Segunda (sáb–seg)</button>
+      </div>
+    </div>
+    <div class="field" id="filters">
+      <span class="lbl" id="trLbl">Transporte</span>
+      <div class="seg" role="group" aria-labelledby="trLbl">
+        <button id="tAll" aria-pressed="true">Todos</button>
+        <button id="tFly" aria-pressed="false">Avião</button>
+        <button id="tTrain" aria-pressed="false">Trem</button>
+      </div>
+    </div>
+    <div class="field">
+      <label for="sortSel">Ordenar</label>
+      <select id="sortSel">
+        <option value="season">Boa época primeiro</option>
+        <option value="cost">Mais barato por dia</option>
+        <option value="beauty">Mais bonito</option>
+        <option value="time">Viagem mais curta</option>
+      </select>
+    </div>
+    <label class="check" for="opoChk"><input type="checkbox" id="opoChk"> Só onde também há direto do Porto</label>
+  </div>
+</div>
+
+<main>
+  <section class="wrap" id="view-dest">
+    <div class="summary" id="summary"></div>
+    <div class="grid" id="grid"></div>
+    <p class="foot">Os custos por dia são estimativas para duas pessoas dividindo um quarto simples, com comida e transporte local, por pessoa, em baixa temporada. A duração é a do voo ou trem direto. As rotas das low-cost mudam a cada temporada: o selo "direto do Porto" indica rotas que costumam existir, mas sempre confira no Google Flights antes de comprar. Os botões já abrem a busca com as datas do fim de semana escolhido.</p>
+  </section>
+  <section class="wrap" id="view-plan" hidden>
+    <div class="empty" id="planEmpty">
+      <h2>Seu 2027 ainda está livre</h2>
+      <p style="margin:0">Na aba Destinos, escolha um fim de semana e toque em "Pôr no plano". Ou toque em "escolher" em qualquer fim de semana abaixo.</p>
+    </div>
+    <div class="year" id="year"></div>
+  </section>
+</main>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const DEST = [
+  // [id, cidade, país, código Google, código Skyscanner, modo, duração min, €/dia, beleza 1-5, Porto direto, meses bons, companhias, por que ir]
+  {id:"prg",city:"Praga",country:"República Tcheca",code:"PRG",sky:"prg",mode:"fly",min:150,day:75,beauty:5,opo:false,months:[3,4,5,10,11,12],air:"Vueling, Smartwings",why:"Cidade velha medieval, ponte Carlos ao amanhecer, cerveja muito barata. Em dezembro tem mercado de Natal, mas os preços sobem."},
+  {id:"ckr",city:"Český Krumlov",country:"República Tcheca (via Praga)",code:"PRG",sky:"prg",mode:"fly",min:150,day:65,beauty:5,opo:false,months:[4,5,9,10],air:"Voo até Praga + ônibus de 3h",why:"Vilarejo de conto de fadas num meandro do rio. Dá para fazer Praga + 1 noite aqui num fim de semana de 3 dias."},
+  {id:"sof",city:"Sófia",country:"Bulgária",code:"SOF",sky:"sof",mode:"fly",min:185,day:45,beauty:3,opo:false,months:[3,4,5,9,10,11],air:"Wizz Air, Ryanair",why:"Uma das capitais mais baratas da UE. Bate-volta ao Mosteiro de Rila, um dos lugares mais bonitos dos Bálcãs."},
+  {id:"bud",city:"Budapeste",country:"Hungria",code:"BUD",sky:"bud",mode:"fly",min:160,day:65,beauty:5,opo:true,months:[3,4,5,10,11,12],air:"Wizz Air, Ryanair, Vueling",why:"O Danúbio à noite, banhos termais (perfeitos no frio) e bares em ruínas. Ótima relação custo-beleza."},
+  {id:"krk",city:"Cracóvia",country:"Polônia",code:"KRK",sky:"krk",mode:"fly",min:165,day:55,beauty:4,opo:false,months:[3,4,5,9,10,12],air:"Ryanair, Vueling",why:"Praça medieval enorme, bairro judeu Kazimierz, comida barata. Bate-volta às minas de sal de Wieliczka."},
+  {id:"otp",city:"Bucareste + Brasov",country:"Romênia",code:"OTP",sky:"buch",mode:"fly",min:200,day:50,beauty:4,opo:false,months:[4,5,9,10],air:"Wizz Air, Ryanair",why:"Pegue o trem até Brasov, na Transilvânia: montanhas, castelos e cidade velha bonita, com preços baixos."},
+  {id:"beg",city:"Belgrado",country:"Sérvia",code:"BEG",sky:"beg",mode:"fly",min:160,day:50,beauty:3,opo:false,months:[4,5,9,10],air:"Air Serbia",why:"Fortaleza sobre os rios, vida noturna famosa e comida farta. Fora da UE, então leve o passaporte ou documento válido."},
+  {id:"vie",city:"Viena",country:"Áustria",code:"VIE",sky:"vie",mode:"fly",min:140,day:110,beauty:5,opo:false,months:[3,4,11,12],air:"Vueling, Level",why:"Palácios, cafés e museus. Mais cara, mas linda no inverno. Bratislava fica a 1h de trem."},
+  {id:"rix",city:"Riga",country:"Letônia",code:"RIX",sky:"rix",mode:"fly",min:220,day:65,beauty:4,opo:false,months:[5,6,9,12],air:"airBaltic, Ryanair",why:"Art nouveau por todo lado e cidade velha hanseática. Diferente de tudo no sul."},
+  {id:"ath",city:"Atenas",country:"Grécia",code:"ATH",sky:"ath",mode:"fly",min:190,day:75,beauty:4,opo:false,months:[3,4,5,10,11],air:"Vueling, Aegean",why:"Acrópole sem fila e sem calor em março ou novembro. Dá para ir de barco a Égina num dia."},
+  {id:"nap",city:"Nápoles",country:"Itália",code:"NAP",sky:"nap",mode:"fly",min:115,day:70,beauty:4,opo:false,months:[3,4,5,10,11],air:"Vueling, Ryanair",why:"A melhor pizza do mundo, Pompeia e, fora de época, a Costa Amalfitana vazia e mais barata."},
+  {id:"bri",city:"Bari + Polignano",country:"Itália (Puglia)",code:"BRI",sky:"bri",mode:"fly",min:130,day:65,beauty:5,opo:false,months:[4,5,10],air:"Ryanair, Vueling",why:"Cidades brancas sobre o mar, trulli de Alberobello e Matera a 1h. Uma das regiões mais bonitas da Itália."},
+  {id:"pmo",city:"Palermo",country:"Itália (Sicília)",code:"PMO",sky:"pmo",mode:"fly",min:110,day:65,beauty:4,opo:false,months:[3,4,5,10,11],air:"Vueling, Ryanair",why:"Mercados de rua, igrejas árabe-normandas e Cefalù a 1h de trem. Inverno ameno."},
+  {id:"blq",city:"Bolonha",country:"Itália",code:"BLQ",sky:"blq",mode:"fly",min:100,day:80,beauty:4,opo:true,months:[3,4,5,10,11],air:"Ryanair, Vueling",why:"Capital da comida italiana, com arcadas por toda a cidade. Florença fica a 37 min de trem."},
+  {id:"trn",city:"Turim",country:"Itália",code:"TRN",sky:"trn",mode:"fly",min:80,day:80,beauty:3,opo:false,months:[3,4,10,11,12],air:"Ryanair, Vueling",why:"Elegante e pouco turística, com Alpes no horizonte. Café, chocolate e vinhos do Piemonte."},
+  {id:"ven",city:"Veneza",country:"Itália",code:"VCE",sky:"veni",mode:"fly",min:105,day:120,beauty:5,opo:false,months:[1,2,11],air:"Vueling, Ryanair (Treviso)",why:"Em janeiro ou novembro, com neblina e sem multidões, fica outra cidade. Evite o Carnaval se quiser preço baixo."},
+  {id:"rom",city:"Roma",country:"Itália",code:"ROM",sky:"rome",mode:"fly",min:110,day:95,beauty:5,opo:true,months:[1,2,3,11],air:"Vueling, Ryanair",why:"Clássico que nunca falha. Janeiro e fevereiro têm as menores filas do ano."},
+  {id:"mil",city:"Milão + Lago de Como",country:"Itália",code:"MIL",sky:"mila",mode:"fly",min:90,day:90,beauty:4,opo:true,months:[3,4,10,11],air:"Ryanair (Bergamo), Vueling",why:"Voos muito baratos para Bergamo. Dá para ficar em Como ou Varenna e ver o lago sem a lotação do verão."},
+  {id:"mla",city:"Malta",country:"Malta",code:"MLA",sky:"mla",mode:"fly",min:125,day:75,beauty:4,opo:false,months:[2,3,4,10,11],air:"Ryanair, Vueling",why:"Valletta inteira é patrimônio da humanidade, mar azul e 18°C em fevereiro."},
+  {id:"opo",city:"Porto",country:"Portugal",code:"OPO",sky:"opo",mode:"fly",min:105,day:65,beauty:5,opo:true,months:[1,2,3,4,10,11,12],air:"Vueling, Ryanair",why:"A cidade da sua namorada. Base ótima para ela receber você ou para um fim de semana no Douro."},
+  {id:"lis",city:"Lisboa",country:"Portugal",code:"LIS",sky:"lis",mode:"fly",min:115,day:85,beauty:5,opo:true,months:[1,2,3,4,10,11],air:"Vueling, TAP, Ryanair",why:"Ponto de encontro fácil: ela vai de trem do Porto (3h) e você voa de Barcelona. Sintra num dos dias."},
+  {id:"mpl",city:"Montpellier",country:"França",code:"MPL",sky:"mpl",mode:"train",min:180,day:85,beauty:3,opo:false,months:[3,4,5,10],air:"Trem direto Renfe / SNCF",why:"A viagem de trem mais curta para a França. Centro histórico de pedestres e praias perto."},
+  {id:"avi",city:"Nîmes + Avignon",country:"França (Provença)",code:"AVN",sky:"avn",mode:"train",min:220,day:90,beauty:5,opo:false,months:[3,4,5,10],air:"Trem direto Renfe / SNCF",why:"Arena romana, Pont du Gard e o Palácio dos Papas. A Provença sem o calor e as filas de julho."},
+  {id:"mrs",city:"Marselha",country:"França",code:"MRS",sky:"mrs",mode:"train",min:270,day:90,beauty:4,opo:true,months:[3,4,5,10,11],air:"Trem direto Renfe / SNCF",why:"Porto antigo, bouillabaisse e as Calanques. Ela pode voar do Porto e vocês se encontram lá."},
+  {id:"lys",city:"Lyon",country:"França",code:"LYS",sky:"lys",mode:"train",min:300,day:95,beauty:4,opo:true,months:[3,4,10,11,12],air:"Trem direto Renfe / SNCF",why:"A capital gastronômica da França. Em 8 de dezembro tem a Fête des Lumières."},
+  {id:"tls",city:"Toulouse + Carcassonne",country:"França",code:"TLS",sky:"tls",mode:"train",min:200,day:80,beauty:4,opo:false,months:[3,4,5,10],air:"Trem direto Renfe / SNCF",why:"A 'cidade rosa' e, a 1h, a cidadela medieval de Carcassonne."},
+];
+const MONTHS=["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+const MSHORT=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+const DOW=["dom","seg","ter","qua","qui","sex","sáb"];
+const byId=Object.fromEntries(DEST.map(d=>[d.id,d]));
+
+// Todas as sextas de 2027 (1º de janeiro de 2027 é sexta-feira). Chave = data do sábado.
+const WEEKENDS=[];
+for(let t=Date.UTC(2027,0,1);new Date(t).getUTCFullYear()===2027;t+=7*864e5){
+  const sat=new Date(t+864e5); WEEKENDS.push(iso(sat));
+}
+function iso(d){return d.toISOString().slice(0,10)}
+function addDays(s,n){const d=new Date(s+"T00:00:00Z");d.setUTCDate(d.getUTCDate()+n);return iso(d)}
+function range(sat,mode){return mode==="mon"?[sat,addDays(sat,2)]:[addDays(sat,-1),addDays(sat,1)]}
+function short(s){const d=new Date(s+"T00:00:00Z");return `${d.getUTCDate()} ${MSHORT[d.getUTCMonth()]}`}
+function longRange(sat,mode){const[a,b]=range(sat,mode);const da=new Date(a+"T00:00:00Z"),db=new Date(b+"T00:00:00Z");return `${DOW[da.getUTCDay()]} ${short(a)} – ${DOW[db.getUTCDay()]} ${short(b)}`}
+function monthOf(s){return new Date(s+"T00:00:00Z").getUTCMonth()+1}
+function yymmdd(s){return s.slice(2,4)+s.slice(5,7)+s.slice(8,10)}
+function hm(m){return `${Math.floor(m/60)}h${String(m%60).padStart(2,"0")}`}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+
+function links(d,sat,mode,compact){
+  const[a,b]=range(sat,mode);const out=[];
+  if(d.mode==="fly"){
+    const q=o=>"https://www.google.com/travel/flights?q="+encodeURIComponent(`Flights from ${o} to ${d.code} on ${a} through ${b}`);
+    out.push([compact?"Voos":"Google Flights",q("BCN")]);
+    if(!compact)out.push(["Skyscanner",`https://www.skyscanner.es/transport/flights/bcn/${d.sky}/${yymmdd(a)}/${yymmdd(b)}/`]);
+  }else{
+    out.push([compact?"Trem":"Trem (Trainline)","https://www.thetrainline.com/pt"]);
+    if(!compact)out.push(["Rotas (Rome2Rio)","https://www.rome2rio.com/map/Barcelona/"+encodeURIComponent(d.city.split(" + ")[0])]);
+  }
+  if(d.opo&&d.code!=="OPO"){
+    out.push([compact?"Do Porto":"Voo dela, do Porto","https://www.google.com/travel/flights?q="+encodeURIComponent(`Flights from OPO to ${d.code} on ${a} through ${b}`)]);
+  }
+  out.push([compact?"Hotel":"Hospedagem","https://www.booking.com/searchresults.html?ss="+encodeURIComponent(d.city.split(" + ")[0])+`&checkin=${a}&checkout=${b}`]);
+  return out.map(([t,u])=>`<a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)}</a>`).join("");
+}
+
+// ---------- estado ----------
+let state={sat:defaultSat(),mode:"fri",tr:"all",sort:"season",opo:false,tab:"dest"};
+let trips={}; // chave: sábado
+function defaultSat(){return WEEKENDS.find(s=>s>="2027-03-01")}
+try{const s=JSON.parse(localStorage.getItem("esc27-ui")||"null");if(s)Object.assign(state,s,{tab:s.tab||"dest"})}catch(e){}
+function saveUi(){try{localStorage.setItem("esc27-ui",JSON.stringify(state))}catch(e){}}
+
+// ---------- armazenamento: db compartilhado, ou só neste navegador ----------
+let db=null, canWrite=true;
+const local={
+  load(){try{return JSON.parse(localStorage.getItem("esc27-trips")||"{}")}catch(e){return{}}},
+  save(){try{localStorage.setItem("esc27-trips",JSON.stringify(trips))}catch(e){}}
+};
+trips=local.load();
+async function putTrip(sat,data){
+  if(data)trips[sat]=data;else delete trips[sat];
+  render();
+  if(db){
+    try{ data?await db.collection("trips").doc(sat).set(data):await db.collection("trips").doc(sat).delete() }
+    catch(e){ if(e&&e.code==="invalid_argument"){canWrite=false;toast("Você só pode ver este plano. Peça acesso de edição ao dono.")} else toast("Não deu para salvar. Tente de novo.") }
+  }else local.save();
+}
+(async()=>{
+  const sync=document.getElementById("sync");
+  try{ db=window.claude&&await window.claude.use("db") }catch(e){db=null}
+  if(!db){sync.textContent="Plano salvo só neste navegador";return}
+  sync.textContent="Plano compartilhado · atualiza ao vivo";
+  db.collection("trips").onSnapshot(snap=>{
+    const next={};snap.docs.forEach(d=>{if(d.exists)next[d.id]=d.data()});
+    trips=next;render();
+  },()=>{sync.textContent="Sem conexão com o plano compartilhado"});
+})();
+
+// ---------- render ----------
+function score(d){return d.months.includes(monthOf(state.sat))}
+function render(){
+  saveUi();
+  const sel=document.getElementById("wkSel");
+  if(!sel.options.length){
+    let html="",cur=0;
+    WEEKENDS.forEach(s=>{const m=monthOf(addDays(s,-1));if(m!==cur){if(cur)html+="</optgroup>";html+=`<optgroup label="${MONTHS[m-1]}">`;cur=m}html+=`<option value="${s}"></option>`});
+    sel.innerHTML=html+"</optgroup>";
+  }
+  [...sel.options].forEach(o=>{const t=trips[o.value];o.textContent=longRange(o.value,state.mode)+(t?` · ${byId[t.dest]?.city||""}`:"")});
+  sel.value=state.sat;
+  setPressed("mFri",state.mode==="fri");setPressed("mMon",state.mode==="mon");
+  setPressed("tAll",state.tr==="all");setPressed("tFly",state.tr==="fly");setPressed("tTrain",state.tr==="train");
+  document.getElementById("sortSel").value=state.sort;
+  document.getElementById("opoChk").checked=state.opo;
+  document.getElementById("tab-dest").setAttribute("aria-selected",state.tab==="dest");
+  document.getElementById("tab-plan").setAttribute("aria-selected",state.tab==="plan");
+  document.getElementById("view-dest").hidden=state.tab!=="dest";
+  document.getElementById("view-plan").hidden=state.tab!=="plan";
+  document.getElementById("tripCount").textContent=Object.keys(trips).length;
+  renderDest();renderYear();
+}
+function setPressed(id,v){document.getElementById(id).setAttribute("aria-pressed",v)}
+
+function renderDest(){
+  let list=DEST.filter(d=>(state.tr==="all"||d.mode===state.tr)&&(!state.opo||d.opo));
+  const s={season:(a,b)=>(score(b)-score(a))||(a.day-b.day),cost:(a,b)=>a.day-b.day,beauty:(a,b)=>(b.beauty-a.beauty)||(a.day-b.day),time:(a,b)=>a.min-b.min}[state.sort];
+  list.sort(s);
+  const booked=trips[state.sat];
+  const good=list.filter(score).length;
+  document.getElementById("summary").innerHTML=`<strong>${esc(longRange(state.sat,state.mode))}</strong><span>${list.length} destinos · ${good} em boa época · `+(booked?`já planejado: <b>${esc(byId[booked.dest]?.city||"")}</b>`:"fim de semana livre")+`</span>`;
+  document.getElementById("grid").innerHTML=list.map(d=>{
+    const g=score(d);
+    const mine=booked&&booked.dest===d.id;
+    return `<article class="card${g?" season":""}">
+      <div class="top"><div><h2 class="city">${esc(d.city)}</h2><div class="country">${esc(d.country)}</div></div><span class="code">${d.code}</span></div>
+      <div class="chips">
+        <span class="chip${d.mode==="train"?" train":""}">${d.mode==="train"?"Trem direto":"Voo direto"}</span>
+        ${g?`<span class="chip season">Boa época em ${MSHORT[monthOf(state.sat)-1]}</span>`:""}
+        ${d.opo&&d.id!=="opo"?`<span class="chip opo">Também direto do Porto</span>`:""}
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="v">~${hm(d.min)}</div><div class="k">${d.mode==="train"?"de trem":"de voo"}</div></div>
+        <div class="stat"><div class="v">~€${d.day}</div><div class="k">por dia</div></div>
+        <div class="stat"><div class="v dots" aria-label="beleza ${d.beauty} de 5">${"●".repeat(d.beauty)}${"○".repeat(5-d.beauty)}</div><div class="k">beleza</div></div>
+      </div>
+      <p class="why">${esc(d.why)}</p>
+      <p class="meta">${esc(d.air)} · melhor em ${d.months.map(m=>MSHORT[m-1]).join(", ")}</p>
+      <div class="links">${links(d,state.sat,state.mode,false)}</div>
+      <button class="add" data-add="${d.id}"${mine||!canWrite?" disabled":""}>${mine?"Já está no plano":booked?"Trocar por este":"Pôr no plano"}</button>
+    </article>`}).join("")||`<p>Nenhum destino com esses filtros.</p>`;
+}
+
+let picking=null;
+function renderYear(){
+  const n=Object.keys(trips).length;
+  document.getElementById("planEmpty").hidden=n>0;
+  let html="";
+  for(let m=1;m<=12;m++){
+    const wks=WEEKENDS.filter(s=>monthOf(addDays(s,-1))===m);
+    const used=wks.filter(s=>trips[s]).length;
+    html+=`<div class="month"><h3>${MONTHS[m-1]}<small>${used?used+" viage"+(used>1?"ns":"m"):"livre"}</small></h3>`;
+    wks.forEach(s=>{
+      const t=trips[s];
+      if(t){
+        const d=byId[t.dest];if(!d)return;
+        html+=`<div class="wk has"><span class="d">${short(range(s,t.mode)[0])}</span><div class="t trip">
+          <span class="name">${esc(d.city)}</span>
+          <span class="sub">${esc(longRange(s,t.mode))} · ${d.mode==="train"?"trem":"voo"} ~${hm(d.min)} · ~€${d.day}/dia</span>
+          <div class="mini"><button class="status${t.status==="booked"?" done":""}" data-status="${s}">${t.status==="booked"?"Comprado":"Ideia"}</button>${links(d,s,t.mode,true)}<button class="x" data-del="${s}">remover</button></div>
+          <input class="note-in" type="text" id="note-${s}" data-note="${s}" value="${esc(t.note||"")}" placeholder="Nota (ex.: ela vai junto, preço visto…)" maxlength="140">
+        </div></div>`;
+      }else if(picking===s){
+        html+=`<div class="wk"><span class="d">${short(addDays(s,-1))}</span><div class="t"><select id="pick-${s}" data-pickfor="${s}"><option value="">Escolha o destino…</option>${DEST.map(d=>`<option value="${d.id}">${esc(d.city)}${d.months.includes(m)?" ★":""}</option>`).join("")}</select></div></div>`;
+      }else{
+        html+=`<div class="wk"><span class="d">${short(addDays(s,-1))}</span><span class="t free">livre</span>${canWrite?`<button class="pick" data-pick="${s}">escolher</button>`:""}</div>`;
+      }
+    });
+    html+="</div>";
+  }
+  document.getElementById("year").innerHTML=html;
+}
+
+// ---------- eventos ----------
+function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,2600)}
+document.getElementById("wkSel").onchange=e=>{state.sat=e.target.value;render()};
+document.getElementById("mFri").onclick=()=>{state.mode="fri";render()};
+document.getElementById("mMon").onclick=()=>{state.mode="mon";render()};
+document.getElementById("tAll").onclick=()=>{state.tr="all";render()};
+document.getElementById("tFly").onclick=()=>{state.tr="fly";render()};
+document.getElementById("tTrain").onclick=()=>{state.tr="train";render()};
+document.getElementById("sortSel").onchange=e=>{state.sort=e.target.value;render()};
+document.getElementById("opoChk").onchange=e=>{state.opo=e.target.checked;render()};
+document.getElementById("tab-dest").onclick=()=>{state.tab="dest";render()};
+document.getElementById("tab-plan").onclick=()=>{state.tab="plan";render()};
+document.addEventListener("click",e=>{
+  const a=e.target.closest("[data-add]");
+  if(a){const d=byId[a.dataset.add];putTrip(state.sat,{dest:d.id,mode:state.mode,status:"idea",note:trips[state.sat]?.note||""});toast(`${d.city} no plano: ${longRange(state.sat,state.mode)}`);return}
+  const st=e.target.closest("[data-status]");
+  if(st){const s=st.dataset.status;const t=trips[s];putTrip(s,{...t,status:t.status==="booked"?"idea":"booked"});return}
+  const del=e.target.closest("[data-del]");
+  if(del){const s=del.dataset.del;const name=byId[trips[s]?.dest]?.city;putTrip(s,null);toast(`${name||"Viagem"} removida`);return}
+  const p=e.target.closest("[data-pick]");
+  if(p){picking=p.dataset.pick;renderYear();document.getElementById("pick-"+picking)?.focus();return}
+});
+document.addEventListener("change",e=>{
+  const p=e.target.closest("[data-pickfor]");
+  if(p){const s=p.dataset.pickfor;picking=null;if(p.value)putTrip(s,{dest:p.value,mode:state.mode,status:"idea",note:""});else renderYear();return}
+  const n=e.target.closest("[data-note]");
+  if(n){const s=n.dataset.note;const t=trips[s];if(t&&(t.note||"")!==n.value)putTrip(s,{...t,note:n.value.trim()})}
+});
+render();
+</script>
+
+</body>
+</html>
